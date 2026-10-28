@@ -69,6 +69,40 @@ class SafeMoveTests(unittest.TestCase):
             [],
         )
 
+    def test_source_unlink_failure_preserves_both_copies(self):
+        source = self.root / "source.txt"
+        destination = self.root / "destination.txt"
+        source.write_text("important data", encoding="utf-8")
+        original_unlink = Path.unlink
+
+        def fail_only_for_source(path, missing_ok=False):
+            if path == source:
+                raise PermissionError("simulated source deletion failure")
+            return original_unlink(path, missing_ok=missing_ok)
+
+        with mock.patch(
+            "pathlib.Path.unlink",
+            autospec=True,
+            side_effect=fail_only_for_source,
+        ):
+            with self.assertRaisesRegex(
+                PermissionError,
+                "simulated source deletion failure",
+            ):
+                move_without_overwriting(source, destination)
+
+        self.assertTrue(source.exists())
+        self.assertEqual(source.read_text(encoding="utf-8"), "important data")
+        self.assertTrue(destination.exists())
+        self.assertEqual(
+            destination.read_text(encoding="utf-8"),
+            "important data",
+        )
+        self.assertEqual(
+            list(self.root.glob(".destination.txt.*.tmp")),
+            [],
+        )
+
 
 class ClassificationTests(unittest.TestCase):
     def test_pdf_is_document(self):
