@@ -1,5 +1,7 @@
 ﻿# Desktop File Organizer
 
+![Python CI](https://github.com/vincentokello770-arch/desktop-file-organizer/actions/workflows/python-ci.yml/badge.svg?branch=main)
+
 A Python command-line utility that organizes files in a selected directory
 into extension-based categories. Built as a practical software engineering
 portfolio project, with safety controls and automated tests.
@@ -184,3 +186,4 @@ and services chosen by the user.
 
 No license has been selected yet. Until one is added, do not assume others
 have permission to redistribute or reuse this project.
+
