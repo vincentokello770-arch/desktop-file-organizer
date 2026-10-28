@@ -4,6 +4,7 @@ import argparse
 import logging
 import os
 import shutil
+import tempfile
 from pathlib import Path
 
 
@@ -74,6 +75,37 @@ def unique_destination(destination):
         counter += 1
 
 
+def move_without_overwriting(source, destination):
+    """Move a file without overwriting an existing destination."""
+    source = Path(source)
+    destination = Path(destination)
+    temporary_path = None
+
+    try:
+        # Copy to a temporary file in the destination directory first.
+        with tempfile.NamedTemporaryFile(
+            mode="wb",
+            prefix=f".{destination.name}.",
+            suffix=".tmp",
+            dir=destination.parent,
+            delete=False,
+        ) as temporary:
+            temporary_path = Path(temporary.name)
+            with source.open("rb") as original:
+                shutil.copyfileobj(original, temporary)
+
+        # Publish the complete file without replacing an existing path.
+        destination.hardlink_to(temporary_path)
+
+        # Remove the source only after the destination has been published.
+        source.unlink()
+        return destination
+
+    finally:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
+
+
 def organize_directory(directory, apply_changes=False):
     """
     Preview or organize files directly inside directory.
@@ -142,7 +174,7 @@ def organize_directory(directory, apply_changes=False):
                 destination_folder / item.name
             )
 
-            shutil.move(str(item), str(destination))
+            move_without_overwriting(item, destination)
 
             result["moved"] += 1
             result["actions"].append(
