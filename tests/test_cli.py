@@ -70,6 +70,31 @@ class CliIntegrationTests(unittest.TestCase):
         self.assertFalse((self.root / "Documents").exists())
         self.assertFalse((self.root / "Spreadsheets").exists())
 
+    def test_cli_missing_directory_returns_error_without_traceback(self):
+        missing_directory = self.root / "directory-that-does-not-exist"
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "desktop_file_organizer.organizer",
+                "--directory",
+                str(missing_directory),
+            ],
+            cwd=PROJECT_ROOT,
+            env=self.environment,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("ERROR:", result.stdout)
+        self.assertIn("Directory does not exist", result.stdout)
+        self.assertNotIn("Traceback (most recent call last)", result.stderr)
+        self.assertFalse(missing_directory.exists())
+
     def test_cli_apply_moves_files_and_reports_success(self):
         result = self.run_cli("--apply")
 
