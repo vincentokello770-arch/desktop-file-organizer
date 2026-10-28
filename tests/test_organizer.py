@@ -104,6 +104,39 @@ class SafeMoveTests(unittest.TestCase):
         )
 
 
+    def test_cleanup_failure_does_not_mask_source_deletion_error(self):
+        source = self.root / "source.txt"
+        destination = self.root / "destination.txt"
+        source.write_text("important data", encoding="utf-8")
+        original_unlink = Path.unlink
+
+        def simulate_two_failures(path, missing_ok=False):
+            if path == source:
+                raise PermissionError("source deletion failed")
+            if path.name.startswith(".destination.txt.") and path.suffix == ".tmp":
+                raise OSError("temporary cleanup failed")
+            return original_unlink(path, missing_ok=missing_ok)
+
+        with mock.patch(
+            "pathlib.Path.unlink",
+            autospec=True,
+            side_effect=simulate_two_failures,
+        ):
+            with self.assertRaisesRegex(
+                PermissionError,
+                "source deletion failed",
+            ):
+                move_without_overwriting(source, destination)
+
+        self.assertTrue(source.exists())
+        self.assertEqual(source.read_text(encoding="utf-8"), "important data")
+        self.assertTrue(destination.exists())
+        self.assertEqual(
+            destination.read_text(encoding="utf-8"),
+            "important data",
+        )
+
+
 class ClassificationTests(unittest.TestCase):
     def test_pdf_is_document(self):
         self.assertEqual(classify_file(Path("report.pdf")), "Documents")

@@ -103,7 +103,14 @@ def move_without_overwriting(source, destination):
 
     finally:
         if temporary_path is not None:
-            temporary_path.unlink(missing_ok=True)
+            try:
+                temporary_path.unlink(missing_ok=True)
+            except OSError:
+                LOGGER.warning(
+                    "Could not remove temporary file %s",
+                    temporary_path,
+                    exc_info=True,
+                )
 
 
 def organize_directory(directory, apply_changes=False):
